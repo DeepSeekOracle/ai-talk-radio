@@ -1,0 +1,9 @@
+node_modules
+dist
+output
+.git
+.env
+.env.local
+*.zip
+*.log
+.DS_Store
