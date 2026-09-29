@@ -3,11 +3,10 @@ title: AI Talk Radio
 emoji: 📻
 colorFrom: purple
 colorTo: blue
-sdk: docker
-app_port: 7860
+sdk: static
 pinned: false
 license: apache-2.0
-short_description: Ungated talk-radio desk. Generate a show, then download the full zip.
+short_description: Ungated talk radio desk. Generate a show, download the zip.
 ---
 
 # AI Talk Radio — ungated desk

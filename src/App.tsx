@@ -9,6 +9,7 @@ import { MOCK_SHOW, transformShow } from './data';
 import { Transcript } from './components/Transcript';
 import { saveUserShow, getUserShows, deleteUserShow } from './lib/clientDb';
 import { GATES_OPEN, LOCAL_OPERATOR, UNLIMITED_QUOTA } from './lib/gates';
+import { apiAlive, runBrowserShow } from './lib/browserPipeline';
 
 const IS_DEV = true; // ungated build: always treat as local operator
 void GATES_OPEN;
@@ -865,10 +866,14 @@ export default function App() {
       if (show.audioUrl) {
         try {
           const audioBlob = await getFileContent(show.audioUrl);
-          zip.file("ai_radio.mp3", audioBlob);
+          const ext = (audioBlob.type || '').includes('wav') ? 'wav' : 'mp3';
+          zip.file(`ai_radio.${ext}`, audioBlob);
         } catch (err) {
           console.error("Failed to include audio in zip:", err);
         }
+      }
+      if (show.script) {
+        zip.file("script.md", String(show.script));
       }
 
       // Add cover image to ZIP in memory
@@ -1000,6 +1005,38 @@ export default function App() {
         generationId
       });
 
+      const hasApi = await apiAlive();
+      if (!hasApi) {
+        const browserShow = await runBrowserShow({
+          topic: p,
+          duration: d,
+          mood: m,
+          onEvent: (event) => {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            if (event.type === "info" || event.type === "error") {
+              setGenerationLogs(prev => [...prev, {
+                id: Math.random().toString(), timestamp, type: event.type, content: event.message
+              }]);
+              if (event.message) setCurrentStage(event.message);
+            } else if (event.type === "show_data" && event.data) {
+              generatedShow = transformShow({
+                ...event.data,
+                coverImage: event.data.coverImage || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop",
+                downloadUrl: event.data.downloadUrl,
+                showId: event.data.showId,
+                mp3Url: event.data.mp3Url || event.data.audioUrl,
+                isUserGenerated: true,
+              });
+            }
+          }
+        });
+        if (!generatedShow && browserShow) {
+          generatedShow = transformShow({
+            ...browserShow,
+            isUserGenerated: true,
+          });
+        }
+      } else {
       const response = await fetch('/api/generate-show', {
         method: 'POST',
         headers,
@@ -1168,6 +1205,7 @@ export default function App() {
             console.error("Error parsing event:", e, dataStr);
           }
         }
+      }
       }
 
       // Add a slight delay for dramatic effect
