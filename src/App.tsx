@@ -164,6 +164,99 @@ function SignalNav() {
   );
 }
 
+function OnTheDials() {
+  const cells = [
+    {
+      title: "Engineering Consciousness — Spotify",
+      kind: "spotify" as const,
+      src: "https://open.spotify.com/embed/show/1iuZmBHWIcRoZIpyCjYC2g?utm_source=generator&theme=0",
+      iframeTitle: "Engineering Consciousness: The LYGO Project — Spotify player",
+      open: "https://open.spotify.com/show/1iuZmBHWIcRoZIpyCjYC2g",
+      openLabel: "Open on Spotify",
+    },
+    {
+      title: "The Harmonic Architect — Spotify",
+      kind: "spotify" as const,
+      src: "https://open.spotify.com/embed/show/2UXNrC6wC8gSzwkgBUzh6j?utm_source=generator&theme=0",
+      iframeTitle: "Justin Helmer: The Harmonic Architect — Spotify player",
+      open: "https://open.spotify.com/show/2UXNrC6wC8gSzwkgBUzh6j",
+      openLabel: "Open on Spotify",
+    },
+    {
+      title: "Engineering Consciousness — Apple",
+      kind: "apple" as const,
+      src: "https://embed.podcasts.apple.com/ca/podcast/engineering-consciousness-the-lygo-project/id6817223819?l=en-US&size=large",
+      iframeTitle: "Engineering Consciousness: The LYGO Project — Apple Podcasts player",
+      open: "https://podcasts.apple.com/ca/podcast/engineering-consciousness-the-lygo-project/id6817223819",
+      openLabel: "Open on Apple Podcasts",
+    },
+    {
+      title: "The Harmonic Architect — Apple",
+      kind: "apple" as const,
+      src: "https://embed.podcasts.apple.com/ca/podcast/justin-helmer-the-harmonic-architect/id6817190841?l=en-US&size=large",
+      iframeTitle: "Justin Helmer: The Harmonic Architect — Apple Podcasts player",
+      open: "https://podcasts.apple.com/ca/podcast/justin-helmer-the-harmonic-architect/id6817190841",
+      openLabel: "Open on Apple Podcasts",
+    },
+  ];
+
+  return (
+    <section className="space-y-4 pt-2" id="on-the-dials">
+      <div className="space-y-1">
+        <p className="sig-kicker">Also on</p>
+        <h3 className="text-xl md:text-2xl font-bold tracking-tight text-white/90">Spotify and Apple Podcasts</h3>
+        <p className="text-xs text-white/45 font-medium leading-relaxed max-w-2xl">
+          Two shows, four players. Pause one before starting another. Full catalog on{' '}
+          <a href={`${SIGNAL_HOME}#on-the-dials`} rel="noopener" className="text-[#5eead4] underline underline-offset-4">
+            chatagent.ca/signal
+          </a>
+          .
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {cells.map((cell) => (
+          <div
+            key={cell.title}
+            className="rounded-2xl border border-[#1e3a4a] bg-[#0c121c]/80 p-4 space-y-3 backdrop-blur-md"
+          >
+            <h4 className="text-sm font-bold text-[#e8eef5] tracking-tight">{cell.title}</h4>
+            <div className="overflow-hidden rounded-xl border border-[#1e3a4a] bg-black/30">
+              {cell.kind === "spotify" ? (
+                <iframe
+                  src={cell.src}
+                  width="100%"
+                  height="352"
+                  title={cell.iframeTitle}
+                  loading="lazy"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  className="block w-full h-[352px] border-0"
+                />
+              ) : (
+                <iframe
+                  src={cell.src}
+                  title={cell.iframeTitle}
+                  loading="lazy"
+                  allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
+                  sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                  className="block w-full border-0 aspect-video"
+                  height="360"
+                />
+              )}
+            </div>
+            <p className="text-[11px] text-[#94a3b8]">
+              <a href={cell.open} rel="noopener" target="_blank" className="text-[#5eead4] underline underline-offset-4">
+                {cell.openLabel}
+              </a>
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SignalFooter() {
   return (
     <footer className="mt-8 mb-8 p-5 rounded-2xl border border-[#1e3a4a] bg-[#0c121c]/80 text-[#94a3b8] text-xs leading-relaxed space-y-3">
@@ -1779,14 +1872,16 @@ export default function App() {
 
             <SignalNav />
 
+            <OnTheDials />
+
             {/* Library */}
             <section className="space-y-6 pt-4">
               <div className="space-y-1">
                 <h3 id="library-section" className="text-xl md:text-2xl font-bold tracking-tight text-white/90">LYGO Signal Library</h3>
                 <p className="text-xs text-white/45 font-medium leading-relaxed">
-                  Defaults from{' '}
+                  Three flagship episodes from{' '}
                   <a href="https://chatagent.ca/signal/" rel="noopener" className="text-[#5eead4] underline underline-offset-4">chatagent.ca/signal</a>
-                  {' '}— Studio Desk first, then the Signal episodes. Play one, or generate your own above.
+                  {' '}under the Spotify and Apple players. Play one, or generate your own above.
                 </p>
               </div>
               <div className="space-y-4 pb-32">
