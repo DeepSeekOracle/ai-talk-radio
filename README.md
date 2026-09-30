@@ -1,22 +1,25 @@
 ---
-title: AI Talk Radio
+title: LYGO Signal Radio
 emoji: 📻
-colorFrom: purple
-colorTo: blue
+colorFrom: green
+colorTo: yellow
 sdk: static
 pinned: false
 license: apache-2.0
-short_description: Ungated talk radio desk. Generate a show, download the zip.
+short_description: LYGO Signal radio show generator. Download the zip.
 ---
 
-# AI Talk Radio — ungated desk
+# LYGO Signal — Radio Show Generator
 
-Public webpage for producing TTS-voiced talk radio. No Google login. No daily-3 quota.
+Public webpage for producing TTS-voiced talk radio on the LYGO Signal brand. No login. No daily cap. Δ9Φ963.
 
 - **Live Space:** https://huggingface.co/spaces/DeepSeekOracle/ai-talk-radio
-- **Direct app:** https://deepseekoracle-ai-talk-radio.hf.space
+- **Direct app:** https://deepseekoracle-ai-talk-radio.static.hf.space
 - **GitHub:** https://github.com/DeepSeekOracle/ai-talk-radio
 - **Signal hub:** https://chatagent.ca/signal/#studio-desk
+- **Donate:** [PayPal.me/ExcavationPro](https://www.paypal.com/paypalme/ExcavationPro) · [Patreon](https://www.patreon.com/Excavationpro/posts/chatagent-ca-api-170485961)
+
+Justin Helmer · Excavationpro / Lightfather.
 
 When a show finishes, download the **full pack** (MP3 + `show_notes.json` + `transcript.txt` + script) from the Zip button, or `GET /api/shows/<id>/download`.
 

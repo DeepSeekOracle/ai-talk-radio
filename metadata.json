@@ -1,6 +1,6 @@
 {
-  "name": "AI Talk Radio",
-  "description": "Generate complete radio shows from simple prompts, featuring dynamic background music, realistic speech, and rich visuals using the new Antigravity agent.",
+  "name": "LYGO Signal Radio Show Generator",
+  "description": "LYGO Signal radio show generator. Write and voice a 5, 10, or 15 minute talk radio show, then download the full pack. Justin Helmer / Excavationpro / Lightfather.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

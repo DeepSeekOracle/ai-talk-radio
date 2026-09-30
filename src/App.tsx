@@ -110,18 +110,80 @@ const getAIStudioBuildUrl = (appletId: string): string => {
   return `${baseDomain}/build?clone=${appletId}`;
 };
 
+const SIGNAL_HOME = 'https://chatagent.ca/signal/';
+const SIGNAL_LOGO = 'https://chatagent.ca/signal/brand/lygo-signal-logo.svg';
+const PAYPAL = 'https://www.paypal.com/paypalme/ExcavationPro';
+const PATREON = 'https://www.patreon.com/Excavationpro/posts/chatagent-ca-api-170485961';
+
 const RainbowBackground = () => (
   <>
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vh] rounded-full bg-[#ff00a2]/40 mix-blend-screen filter blur-[120px] animate-blob" />
-      <div className="absolute top-[10%] -right-[10%] w-[60vw] h-[60vh] rounded-full bg-[#143dff]/40 mix-blend-screen filter blur-[120px] animate-blob animation-delay-2000" />
-      <div className="absolute -bottom-[20%] left-[10%] w-[70vw] h-[70vh] rounded-full bg-[#43ff0d]/30 mix-blend-screen filter blur-[120px] animate-blob animation-delay-4000" />
-      <div className="absolute -bottom-[10%] -right-[10%] w-[60vw] h-[60vh] rounded-full bg-[#ffc500]/30 mix-blend-screen filter blur-[120px] animate-blob animation-delay-6000" />
-      <div className="absolute top-[30%] left-[30%] w-[50vw] h-[50vh] rounded-full bg-[#ff2a2a]/30 mix-blend-screen filter blur-[120px] animate-blob animation-delay-3000" />
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#070b12]">
+      <div className="absolute -top-[18%] -left-[12%] w-[65vw] h-[65vh] rounded-full bg-[#14b8a6]/30 mix-blend-screen filter blur-[110px]" />
+      <div className="absolute top-[8%] -right-[12%] w-[55vw] h-[55vh] rounded-full bg-[#fbbf24]/18 mix-blend-screen filter blur-[110px]" />
+      <div className="absolute -bottom-[18%] left-[16%] w-[60vw] h-[60vh] rounded-full bg-[#5eead4]/18 mix-blend-screen filter blur-[110px]" />
+      <div className="absolute inset-0 sig-lattice-grid" />
     </div>
-    <div className="absolute inset-0 bg-black/50 backdrop-blur-[60px] z-0 pointer-events-none" />
+    <div className="absolute inset-0 bg-[#070b12]/60 backdrop-blur-[48px] z-0 pointer-events-none" />
   </>
 );
+
+function SignalNav() {
+  return (
+    <header className="flex flex-col gap-4 bg-[#0c121c]/80 border border-[#1e3a4a] rounded-2xl p-4 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <a href={SIGNAL_HOME} className="flex items-center gap-3 min-w-0 group" rel="noopener">
+          <img src={SIGNAL_LOGO} alt="LYGO Signal" className="sig-lockup" width={220} height={62} />
+        </a>
+        <nav className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-wider">
+          <a href={SIGNAL_HOME} rel="noopener" className="px-3 py-1.5 rounded-full bg-white/5 border border-[#1e3a4a] text-[#5eead4] hover:text-[#fbbf24] hover:border-[#fbbf24]/40">
+            Signal
+          </a>
+          <a href={`${SIGNAL_HOME}#studio-desk`} rel="noopener" className="px-3 py-1.5 rounded-full bg-white/5 border border-[#1e3a4a] text-[#94a3b8] hover:text-[#5eead4]">
+            Studio Desk
+          </a>
+          <a href={PAYPAL} target="_blank" rel="noopener noreferrer" className="sig-nav-donate">
+            Donate
+          </a>
+          <a href={PATREON} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-full border border-[#fbbf24]/40 text-[#fbbf24] hover:bg-[#fbbf24]/10">
+            Patreon
+          </a>
+        </nav>
+      </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div>
+          <p className="sig-kicker">Δ9Φ963 · radio show generator</p>
+          <p className="text-sm font-bold text-[#e8eef5] leading-tight mt-1">LYGO Signal</p>
+          <p className="text-[11px] text-[#94a3b8] font-medium">Justin Helmer · Excavationpro / Lightfather · open desk, no login</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#14b8a6]/10 border border-[#14b8a6]/30 text-[10px] font-bold font-mono tracking-tight text-[#5eead4]">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#14b8a6] animate-pulse" />
+          <span>ON THE DIAL · UNLIMITED SHOWS</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function SignalFooter() {
+  return (
+    <footer className="mt-8 mb-8 p-5 rounded-2xl border border-[#1e3a4a] bg-[#0c121c]/80 text-[#94a3b8] text-xs leading-relaxed space-y-3">
+      <p className="sig-kicker">Δ9Φ963</p>
+      <p className="text-[#e8eef5] font-bold text-sm">LYGO Signal Radio Show Generator</p>
+      <p>
+        A talk-radio desk on the lattice. Shows are synthetic roundtables you write from a topic,
+        then download as a full pack (audio, transcript, notes, script).{' '}
+        <a href={SIGNAL_HOME} rel="noopener" className="text-[#5eead4] underline underline-offset-4">Back to LYGO Signal</a>
+        {' · '}
+        <a href={`${SIGNAL_HOME}#studio-desk`} rel="noopener" className="text-[#5eead4] underline underline-offset-4">Studio Desk</a>
+      </p>
+      <p className="flex flex-wrap gap-2">
+        <a href={PAYPAL} target="_blank" rel="noopener noreferrer" className="sig-nav-donate">Donate via PayPal.me/ExcavationPro</a>
+        <a href={PATREON} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-full border border-[#fbbf24]/40 text-[#fbbf24] font-bold uppercase tracking-wider text-[11px]">Patreon</a>
+      </p>
+      <p className="text-[11px] text-[#5b6b7d]">© Justin Helmer · Excavationpro / Lightfather · chatagent.ca/signal</p>
+    </footer>
+  );
+}
 
 export default function App() {
   const [view, setView] = useState<'home' | 'player' | 'generating'>('home');
@@ -1271,10 +1333,13 @@ export default function App() {
               <Bot className="w-8 h-8 text-io-blue animate-pulse" />
             </div>
 
+            <a href={SIGNAL_HOME} rel="noopener" className="inline-flex justify-center mb-2">
+              <img src={SIGNAL_LOGO} alt="LYGO Signal" className="h-8 w-auto mx-auto" />
+            </a>
             <h2 className="text-2xl font-bold tracking-tight text-white/90">
               {generationComplete ? "Show Ready" : currentStage}
             </h2>
-            <p className="text-white/40 font-medium text-sm max-w-lg mx-auto">Creating custom radio show about: "{activePrompt}"</p>
+            <p className="text-white/40 font-medium text-sm max-w-lg mx-auto">LYGO Signal Radio Show Generator · "{activePrompt}"</p>
           </div>
 
           <div className="flex-1 overflow-hidden relative rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-md shadow-2xl flex flex-col">
@@ -1455,16 +1520,10 @@ export default function App() {
                         <ShieldAlert className="w-5 h-5 animate-pulse" />
                       </div>
                       <div className="space-y-3 flex-1 text-center md:text-left">
-                        <h4 className="font-bold text-red-200 text-xs md:text-sm tracking-wide uppercase">AI Studio Quota Limit Handled</h4>
+                        <h4 className="font-bold text-red-200 text-xs md:text-sm tracking-wide uppercase">Desk engine paused</h4>
                         <p className="text-white/75 text-xs leading-relaxed font-sans">
-                          The current Gemini API key has run out of request quota for generating complete shows. Generating background soundscapes, distinct host voices via Lyria & Speech models, and painting covers demands a persistent billing plan or a personal Gemini API key.
+                          The current cloud key ran out of request quota. This generator still voices shows in the browser on the static desk. Retry, or run the local VoiceStudio path on the studio machine.
                         </p>
-                        <div className="text-[11px] text-white/60 bg-black/30 p-3 rounded-lg font-sans space-y-1">
-                          <div className="font-bold text-red-300">How to unlock unlimited generations:</div>
-                          <div>1. Go to the top-right <span className="font-semibold text-white/90">Settings &gt; Secrets</span> inside AI Studio.</div>
-                          <div>2. Locate <span className="font-mono text-io-blue font-bold">GEMINI_API_KEY</span>.</div>
-                          <div>3. Enter your own personal billed Google Gemini API Key.</div>
-                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -1507,9 +1566,9 @@ export default function App() {
           duration: "5"
         },
         {
-          title: "GitHub Roundtable",
-          desc: "Review the AlphaFold 3 repository and Google DeepMind's biology model",
-          prompt: "Generate a radio show with a roundtable concept, educating listeners about https://github.com/google-deepmind/alphafold3.",
+          title: "Lattice Roundtable",
+          desc: "A Signal desk on the LYGO protocol, Δ9Φ963, and local-first AI",
+          prompt: "Generate a radio show about the LYGO protocol, Δ9Φ963 lattice, and local-first AI radio on https://chatagent.ca/signal/",
           duration: "5"
         }
       ],
@@ -1549,33 +1608,7 @@ export default function App() {
 
         <div className="relative z-10 w-full h-full overflow-y-auto">
           <div className="max-w-4xl mx-auto space-y-12 p-6 md:p-16">
-            {/* Header */}
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.02] border border-white/5 rounded-2xl p-4 backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-full bg-io-green/80 border border-white/25 shadow-sm flex items-center justify-center text-[10px] font-bold text-black">
-                          L
-                        </div>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white/90 leading-tight">
-                          {LOCAL_OPERATOR.displayName}
-                        </span>
-                        <span className="text-[9px] font-medium font-mono text-white/40 leading-none mt-0.5">
-                          ungated · no login · no daily cap
-                        </span>
-                      </div>
-                    </div>
-                </div>
-
-                <div
-                    className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold font-mono tracking-tight text-white/90"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-io-green animate-pulse" />
-                    <span>
-                      OPEN DESK · UNLIMITED SHOWS
-                    </span>
-                  </div>
-            </header>
+            <SignalNav />
 
             {/* Hero / Generator */}
             <section className="space-y-8">
@@ -1585,17 +1618,16 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-4xl md:text-6xl font-bold tracking-tight text-white/95 leading-[1.15]"
                 >
-                  Generate a <span className="text-gradient-io">radio show</span>
+                  Radio Show <span className="text-gradient-io">Generator</span>
                 </motion.h1>
                 <p className="text-white/50 text-sm md:text-base font-medium font-sans">
-                  powered by{' '}
-                  <a 
-                    href="https://blog.google/innovation-and-ai/technology/developers-tools/managed-agents-gemini-api/" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="hover:text-white underline underline-offset-4 decoration-white/20 hover:decoration-white transition-colors cursor-pointer"
+                  LYGO Signal desk · write a 5, 10, or 15 minute roundtable, then download the full pack.{' '}
+                  <a
+                    href={SIGNAL_HOME}
+                    rel="noopener"
+                    className="text-[#5eead4] hover:text-[#fbbf24] underline underline-offset-4 decoration-[#14b8a6]/40 hover:decoration-[#fbbf24] transition-colors"
                   >
-                    gemini managed agents
+                    chatagent.ca/signal
                   </a>
                 </p>
               </div>
@@ -1605,7 +1637,7 @@ export default function App() {
               }} className="space-y-4">
 
                 <div className="relative group/box">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-io-blue/10 via-io-green/10 to-io-yellow/10 rounded-[1.5rem] blur opacity-30 group-focus-within/box:opacity-50 transition duration-1000"></div>
+                  <div className="absolute -inset-1 bg-gradient-to-r from-[#14b8a6]/20 via-[#5eead4]/10 to-[#fbbf24]/20 rounded-[1.5rem] blur opacity-40 group-focus-within/box:opacity-70 transition duration-1000"></div>
                   <div className="relative bg-[#0d0d0d]/85 backdrop-blur-3xl border border-white/10 rounded-[1.5rem] p-4 flex flex-col gap-3 group-focus-within/box:border-white/20 transition-all duration-300">
                     <div className="w-full">
                       <textarea
@@ -1813,6 +1845,7 @@ export default function App() {
               ))}
             </div>
           </section>
+            <SignalFooter />
           </div>
         </div>
       </div>
@@ -1899,14 +1932,15 @@ export default function App() {
 
           {/* DESKTOP ONLY BRANDING COLUMN - Original full design */}
           <div className="hidden lg:flex flex-col h-full overflow-hidden">
-            <div className="p-10 pb-6 flex items-center justify-between shrink-0">
+            <div className="p-10 pb-6 flex items-center justify-between shrink-0 gap-2">
               <button
                 onClick={isSharedPlaybackMode ? remixSharedShow : () => setView('home')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/75 hover:text-white transition-all text-xs font-semibold cursor-pointer border border-white/5 shadow-sm group inline-flex"
               >
                 <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-                <span>Back to Generator</span>
+                <span>Back to Radio Show Generator</span>
               </button>
+              <a href={SIGNAL_HOME} rel="noopener" className="text-[10px] font-bold uppercase tracking-wider text-[#5eead4] hover:text-[#fbbf24]">Signal</a>
             </div>
 
             <div className="flex-1 overflow-y-auto scrollbar-hide px-10 pb-10 space-y-10">
@@ -2003,6 +2037,13 @@ export default function App() {
                     </button>
                   ))}
                 </div>
+                <p className="pt-4 text-[10px] text-[#94a3b8] leading-relaxed">
+                  Δ9Φ963 · <a href={SIGNAL_HOME} rel="noopener" className="text-[#5eead4]">LYGO Signal</a>
+                  {' · '}
+                  <a href={PAYPAL} target="_blank" rel="noopener noreferrer" className="text-[#fbbf24]">Donate</a>
+                  {' · '}
+                  <a href={PATREON} target="_blank" rel="noopener noreferrer" className="text-[#fbbf24]">Patreon</a>
+                </p>
               </div>
             </div>
           </div>
@@ -2033,7 +2074,7 @@ export default function App() {
                   </span>
                   <div className="text-left">
                     <span className="text-xs font-bold text-white/95 block">Listening to shared radio show</span>
-                    <span className="text-[10px] text-white/40 block">Generated via Google AI Studio</span>
+                    <span className="text-[10px] text-white/40 block">Generated on LYGO Signal</span>
                   </div>
                 </div>
                 
@@ -2083,7 +2124,7 @@ export default function App() {
                       <span>Disclaimer</span>
                     </div>
                     <p className="text-[10px] leading-relaxed text-white/70 font-medium font-sans">
-                      This simulated broadcast is user-generated content created using AI Studio. All hosts, voices and scripts are completely synthetic and fictional. It is not produced by or represent Google's opinions.
+                      This simulated broadcast is user-generated content from the LYGO Signal Radio Show Generator. Hosts, voices, and scripts are synthetic roundtable characters. Justin Helmer / Excavationpro / Lightfather.
                     </p>
                   </div>
 
@@ -2096,22 +2137,13 @@ export default function App() {
                       >
                         <span>Generate your own radio show</span>
                       </button>
-                      <button
-                        onClick={() => {
-                          const appletId = getAppletId();
-                          try {
-                            window.parent?.postMessage({
-                              type: 'CLONE_APPLET',
-                              appletId: appletId
-                            }, '*');
-                          } catch (e) {}
-                          const buildUrl = getAIStudioBuildUrl(appletId);
-                          window.open(buildUrl, '_blank');
-                        }}
+                      <a
+                        href={SIGNAL_HOME}
+                        rel="noopener"
                         className="w-full bg-transparent hover:bg-white/5 text-white border border-white/15 hover:border-white/30 font-bold text-xs h-11 rounded-xl transition-all cursor-pointer inline-flex items-center gap-2 justify-center active:scale-[0.98]"
                       >
-                        <span>Remix in Google AI Studio</span>
-                      </button>
+                        <span>Open LYGO Signal</span>
+                      </a>
                     </div>
                   )}
                 </div>
@@ -2125,7 +2157,7 @@ export default function App() {
                 <span>Disclaimer</span>
               </div>
               <p className="text-[10px] md:text-[11px] leading-relaxed text-white/60 font-medium font-sans">
-                This simulated broadcast is user-generated content created using AI Studio. All hosts, voices and scripts are completely synthetic and fictional. It is not produced by or represent Google's opinions.
+                This simulated broadcast is user-generated content from the LYGO Signal Radio Show Generator. Hosts, voices, and scripts are synthetic roundtable characters. Justin Helmer / Excavationpro / Lightfather.
               </p>
             </div>
 
