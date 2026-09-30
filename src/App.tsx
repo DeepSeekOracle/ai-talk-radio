@@ -115,6 +115,9 @@ const SIGNAL_HOME = 'https://chatagent.ca/signal/';
 const SIGNAL_LOGO = 'https://chatagent.ca/signal/brand/lygo-signal-logo.svg';
 const PAYPAL = 'https://www.paypal.com/paypalme/ExcavationPro';
 const PATREON = 'https://www.patreon.com/Excavationpro/posts/chatagent-ca-api-170485961';
+const LEGAL_PRIVACY = 'https://chatagent.ca/privacy.html';
+const LEGAL_TERMS = 'https://chatagent.ca/terms.html';
+const LEGAL_DISCLAIMER = 'https://chatagent.ca/talk-radio/disclaimer.html';
 
 const RainbowBackground = () => (
   <>
@@ -258,6 +261,19 @@ function OnTheDials() {
   );
 }
 
+function LegalLinks({ className = "" }: { className?: string }) {
+  const link = "text-[#5eead4] underline underline-offset-4 hover:text-[#fbbf24] decoration-[#14b8a6]/40 hover:decoration-[#fbbf24] transition-colors";
+  return (
+    <nav aria-label="Privacy and legal" className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${className}`}>
+      <a href={LEGAL_PRIVACY} rel="noopener" className={link}>Privacy</a>
+      <span className="text-white/20" aria-hidden="true">·</span>
+      <a href={LEGAL_TERMS} rel="noopener" className={link}>Legal</a>
+      <span className="text-white/20" aria-hidden="true">·</span>
+      <a href={LEGAL_DISCLAIMER} rel="noopener" className={link}>Disclaimer</a>
+    </nav>
+  );
+}
+
 function SignalFooter() {
   return (
     <footer className="mt-8 mb-8 p-5 rounded-2xl border border-[#1e3a4a] bg-[#0c121c]/80 text-[#94a3b8] text-xs leading-relaxed space-y-3">
@@ -274,6 +290,7 @@ function SignalFooter() {
         <a href={PAYPAL} target="_blank" rel="noopener noreferrer" className="sig-nav-donate">Donate via PayPal.me/ExcavationPro</a>
         <a href={PATREON} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-full border border-[#fbbf24]/40 text-[#fbbf24] font-bold uppercase tracking-wider text-[11px]">Patreon</a>
       </p>
+      <LegalLinks className="text-[11px] font-bold uppercase tracking-wider" />
       <p className="text-[11px] text-[#5b6b7d]">© Justin Helmer · Excavationpro / Lightfather · chatagent.ca/signal</p>
     </footer>
   );
@@ -1647,6 +1664,7 @@ export default function App() {
               )}
             </div>
           </div>
+          <LegalLinks className="shrink-0 pt-4 text-[10px] font-bold uppercase tracking-wider justify-center text-white/50" />
         </div>
       </div>
     );
@@ -2203,6 +2221,7 @@ export default function App() {
                     <p className="text-[10px] leading-relaxed text-white/70 font-medium font-sans">
                       This simulated broadcast is user-generated content from the LYGO Signal Radio Show Generator. Hosts, voices, and scripts are synthetic roundtable characters. Justin Helmer / Excavationpro / Lightfather.
                     </p>
+                    <LegalLinks className="pt-1 text-[10px] font-bold uppercase tracking-wider" />
                   </div>
 
                   {/* Full CTAs styled elegantly and consistent with desktop */}
@@ -2236,6 +2255,7 @@ export default function App() {
               <p className="text-[10px] md:text-[11px] leading-relaxed text-white/60 font-medium font-sans">
                 This simulated broadcast is user-generated content from the LYGO Signal Radio Show Generator. Hosts, voices, and scripts are synthetic roundtable characters. Justin Helmer / Excavationpro / Lightfather.
               </p>
+              <LegalLinks className="pt-1 text-[10px] font-bold uppercase tracking-wider" />
             </div>
 
             <div className="bg-[#0f0f0f]/80 backdrop-blur-3xl border border-white/10 rounded-3xl md:rounded-[2.5rem] p-3 pl-4 pr-4 md:p-4 md:pl-6 md:pr-6 relative z-30 shadow-2xl">
