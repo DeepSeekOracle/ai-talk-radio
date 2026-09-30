@@ -10,6 +10,7 @@ import { Transcript } from './components/Transcript';
 import { saveUserShow, getUserShows, deleteUserShow } from './lib/clientDb';
 import { GATES_OPEN, LOCAL_OPERATOR, UNLIMITED_QUOTA } from './lib/gates';
 import { apiAlive, runBrowserShow } from './lib/browserPipeline';
+import { packShowZip, downloadBlob } from './lib/packShow';
 
 const IS_DEV = true; // ungated build: always treat as local operator
 void GATES_OPEN;
@@ -824,12 +825,16 @@ export default function App() {
   const handleDownload = async (e: React.MouseEvent, show: any) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!show) return;
 
-    if (show?.downloadUrl || show?.showId) {
-      const url = show.downloadUrl || `/api/shows/${show.showId}/download`;
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${String(show.title || 'radio-show').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-show.zip`;
+    const serverZip =
+      typeof show.downloadUrl === "string" &&
+      show.downloadUrl.startsWith("/api/") &&
+      (await apiAlive());
+    if (serverZip) {
+      const a = document.createElement("a");
+      a.href = show.downloadUrl;
+      a.download = `${String(show.title || "radio-show").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-show.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -837,96 +842,19 @@ export default function App() {
     }
 
     try {
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-
-      // Helper to fetch/convert any URL or data URI to a Blob
-      const getFileContent = async (url: string): Promise<Blob> => {
-        if (url.startsWith('data:')) {
-          const res = await fetch(url);
-          return await res.blob();
-        }
-        const isExternal = url.startsWith('http') && !url.startsWith(window.location.origin);
-        const fetchUrl = isExternal
-          ? `/api/download-proxy?url=${encodeURIComponent(url)}`
-          : url;
-        const res = await fetch(fetchUrl);
-        if (!res.ok) throw new Error(`Failed to fetch URL: ${url}`);
-        return await res.blob();
-      };
-
-      // Helper to convert seconds into "MM:SS"
-      const formatTimecode = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-      };
-
-      // Add audio file to ZIP in memory
-      if (show.audioUrl) {
-        try {
-          const audioBlob = await getFileContent(show.audioUrl);
-          const ext = (audioBlob.type || '').includes('wav') ? 'wav' : 'mp3';
-          zip.file(`ai_radio.${ext}`, audioBlob);
-        } catch (err) {
-          console.error("Failed to include audio in zip:", err);
-        }
-      }
-      if (show.script) {
-        zip.file("script.md", String(show.script));
-      }
-
-      // Add cover image to ZIP in memory
-      if (show.coverImage) {
-        try {
-          const imgBlob = await getFileContent(show.coverImage);
-          zip.file("cover.png", imgBlob);
-        } catch (err) {
-          console.error("Failed to include cover in zip:", err);
-        }
-      }
-
-      // Reconstruct show_notes.json format
-      const showNotesJson = {
-        show_title: show.title,
-        show_duration: formatTimecode(show.duration),
-        two_sentence_summary: show.summary,
-        date_of_generation: show.date,
-        timecoded_transcript: show.transcript ? show.transcript.map((line: any) => ({
-          timecode: formatTimecode(line.start),
-          speaker: line.speaker,
-          text: line.text
-        })) : []
-      };
-
-      zip.file("show_notes.json", JSON.stringify(showNotesJson, null, 2));
-
-      // Generate the zip on the client side
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const blobUrl = window.URL.createObjectURL(zipBlob);
-      
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `${show.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-show.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(blobUrl);
+      const packed = await packShowZip(show);
+      downloadBlob(packed.blob, packed.filename);
     } catch (err) {
-      console.error('In-browser ZIP creation failed, falling back to individual download:', err);
-      
-      const downloadFile = (url: string, defaultName: string) => {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = defaultName;
-        a.target = '_blank';
+      console.error("Full-show zip failed:", err);
+      if (show.audioUrl) {
+        const a = document.createElement("a");
+        a.href = show.audioUrl;
+        a.download = "ai_radio.wav";
+        a.target = "_blank";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-      };
-
-      if (show.audioUrl) downloadFile(show.audioUrl, 'ai_radio.mp3');
-      if (show.coverImage) downloadFile(show.coverImage, 'cover.png');
+      }
     }
   };
 
@@ -1212,11 +1140,21 @@ export default function App() {
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       if (generatedShow) {
+        let audioBlob: Blob | undefined;
+        try {
+          const src = generatedShow.audioUrl || generatedShow.mp3Url;
+          if (src) audioBlob = await (await fetch(src)).blob();
+        } catch (e) {
+          console.error("Could not cache show audio blob:", e);
+        }
         const userShow = {
           ...generatedShow,
           isUserGenerated: true,
           downloadUrl: generatedShow.downloadUrl,
           showId: generatedShow.showId,
+          script: generatedShow.script,
+          sources: generatedShow.sources,
+          audioBlob,
         };
         
         // Persist to user's IndexedDB database

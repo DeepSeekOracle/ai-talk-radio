@@ -33,6 +33,8 @@ export function transformShow(raw: RawRadioShow): RadioShow {
     showId: raw.showId,
     isUserGenerated: raw.isUserGenerated,
     transcript,
+    script: raw.script,
+    sources: raw.sources,
   };
 }
 
