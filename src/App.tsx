@@ -1578,6 +1578,12 @@ export default function App() {
           desc: "A Signal desk on the LYGO protocol, Δ9Φ963, and local-first AI",
           prompt: "Generate a radio show about the LYGO protocol, Δ9Φ963 lattice, and local-first AI radio on https://chatagent.ca/signal/",
           duration: "5"
+        },
+        {
+          title: "Archive Receipt",
+          desc: "Pull Internet Archive captures of a public URL and talk them through on the desk",
+          prompt: "Generate a radio show from Wayback Machine captures of https://chatagent.ca/ and https://chatagent.ca/signal/ — what the public pages said, and what a dated archive receipt is worth.",
+          duration: "5"
         }
       ],
       culture: [
@@ -1714,7 +1720,7 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 text-[11px] text-white/30">
                   <div className="flex items-center gap-2 font-medium">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#fbbc04]/80 animate-pulse shadow-[0_0_6px_rgba(251,188,4,0.5)]" />
-                    <span>Each radio show generation takes <strong className="text-white/60 font-bold">~5 minutes</strong> to research and voice.</span>
+                    <span>Each radio show generation takes <strong className="text-white/60 font-bold">~5 minutes</strong> to research (Wikipedia, Hacker News, Wayback Machine) and voice.</span>
                   </div>
                   <div className="flex items-center gap-3.5">
                     <span>Please do not submit any sensitive or personal information.</span>

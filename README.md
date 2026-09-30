@@ -13,6 +13,8 @@ short_description: LYGO Signal radio show generator. Download the zip.
 
 Public webpage for producing TTS-voiced talk radio on the LYGO Signal brand. No login. No daily cap. Δ9Φ963.
 
+Browser research pulls Wikipedia, Hacker News, and the Internet Archive Wayback Machine (availability API, public URLs only). Dated archive receipts land in show sources. The CDX index is not queried from the page.
+
 - **Live Space:** https://huggingface.co/spaces/DeepSeekOracle/ai-talk-radio
 - **Direct app:** https://deepseekoracle-ai-talk-radio.static.hf.space
 - **GitHub:** https://github.com/DeepSeekOracle/ai-talk-radio

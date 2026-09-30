@@ -1,5 +1,7 @@
 /** Unique talk-radio script from public research. No login. */
 
+import { extractUrls, readSignalCatalog, researchWayback, wantsStationArchive } from "./wayback";
+
 export type ResearchBit = {
   title: string;
   text: string;
@@ -270,26 +272,55 @@ export async function researchTopic(
     message: `Researching a full ${minutes}-minute show on “${q.slice(0, 80)}”...`,
   });
 
+  let hnBits: ResearchBit[] = [];
+  let wikiTitles: string[] = [];
+
   try {
     if (wantHn) {
       onEvent?.({ type: "info", message: "Pulling Hacker News front page..." });
-      for (const h of await hnHits(q, true, hnN)) add(h);
+      hnBits = await hnHits(q, true, hnN);
+      for (const h of hnBits) add(h);
     }
   } catch {
     /* keep going */
   }
 
   try {
-    const titles = await wikiSearch(q, wikiN);
-    onEvent?.({ type: "info", message: `Wikipedia hits: ${titles.slice(0, 4).join(" · ") || "none"}` });
-    for (const b of await wikiExtractMany(titles.slice(0, wikiN))) add(b);
+    wikiTitles = await wikiSearch(q, wikiN);
+    onEvent?.({ type: "info", message: `Wikipedia hits: ${wikiTitles.slice(0, 4).join(" · ") || "none"}` });
+    for (const b of await wikiExtractMany(wikiTitles.slice(0, wikiN))) add(b);
   } catch {
     /* keep going */
   }
 
   if (!wantHn) {
     try {
-      for (const h of await hnHits(q, false, hnN)) add(h);
+      hnBits = await hnHits(q, false, hnN);
+      for (const h of hnBits) add(h);
+    } catch {
+      /* keep going */
+    }
+  }
+
+  const extraArchive: string[] = [];
+  for (const h of hnBits) {
+    const fromHn = extractUrls(h.text);
+    for (const u of fromHn) extraArchive.push(u);
+  }
+  for (const title of wikiTitles.slice(0, 3)) {
+    extraArchive.push(`https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_"))}`);
+  }
+
+  try {
+    for (const b of await researchWayback(topic, extraArchive, minutes, onEvent)) add(b);
+  } catch {
+    /* keep going */
+  }
+
+  if (wantsStationArchive(topic) || bits.length < 3) {
+    try {
+      const catalog = await readSignalCatalog();
+      if (catalog) add(catalog);
     } catch {
       /* keep going */
     }
