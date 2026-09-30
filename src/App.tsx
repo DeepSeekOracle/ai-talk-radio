@@ -11,6 +11,7 @@ import { saveUserShow, getUserShows, deleteUserShow } from './lib/clientDb';
 import { GATES_OPEN, LOCAL_OPERATOR, UNLIMITED_QUOTA } from './lib/gates';
 import { apiAlive, runBrowserShow } from './lib/browserPipeline';
 import { packShowZip, downloadBlob } from './lib/packShow';
+import { DESK_CATEGORIES, DESK_TEMPLATES, pickDeskTemplate, type DeskCategoryId } from './lib/deskTemplates';
 
 const IS_DEV = true; // ungated build: always treat as local operator
 void GATES_OPEN;
@@ -303,7 +304,7 @@ export default function App() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [targetDuration, setTargetDuration] = useState('5');
   const [targetMood, setTargetMood] = useState('Informative');
-  const [selectedCategory, setSelectedCategory] = useState<'tech' | 'culture' | 'news'>('tech');
+  const [selectedCategory, setSelectedCategory] = useState<DeskCategoryId>('lattice');
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -1652,61 +1653,11 @@ export default function App() {
   }
 
   if (view === 'home') {
-    const templateCategories = [
-      { id: 'tech', label: 'Tech & AI' },
-      { id: 'culture', label: 'Arts & Life' },
-      { id: 'news', label: 'News & Sports' }
-    ] as const;
-
-    const templates = {
-      tech: [
-        {
-          title: "Daily Hacker Bites",
-          desc: "Voice a digest of the top stories currently on Hacker News",
-          prompt: "Generate a radio show called Daily Hacker Bites based on top Hacker News stories.",
-          duration: "5"
-        },
-        {
-          title: "Lattice Roundtable",
-          desc: "A Signal desk on the LYGO protocol, Δ9Φ963, and local-first AI",
-          prompt: "Generate a radio show about the LYGO protocol, Δ9Φ963 lattice, and local-first AI radio on https://chatagent.ca/signal/",
-          duration: "5"
-        },
-        {
-          title: "Archive Receipt",
-          desc: "Pull Internet Archive captures of a public URL and talk them through on the desk",
-          prompt: "Generate a radio show from Wayback Machine captures of https://chatagent.ca/ and https://chatagent.ca/signal/ — what the public pages said, and what a dated archive receipt is worth.",
-          duration: "5"
-        }
-      ],
-      culture: [
-        {
-          title: "Philosophy Café",
-          desc: "Host an atmospheric debate analyzing existentialism and humanity's future",
-          prompt: "Generate a thought-provoking discussion in a cozy café setting discussing existential questions.",
-          duration: "5"
-        },
-        {
-          title: "Cinematic Reviews",
-          desc: "Break down the visual style & legacy of iconic film directors",
-          prompt: "Generate a talk radio segment analyzing the distinct visual styles of movie directors.",
-          duration: "5"
-        }
-      ],
-      news: [
-        {
-          title: "Sports Tournament Debate",
-          desc: "Lively debate about preparations and predictions for a major tournament",
-          prompt: "Generate a lively sports debate about preparations for a major upcoming tournament.",
-          duration: "5"
-        },
-        {
-          title: "Fintech Briefing",
-          desc: "Explain decentralized finance developments and global stock market trends",
-          prompt: "Generate a radio segment providing an interactive briefing on fintech and global markets.",
-          duration: "5"
-        }
-      ]
+    const applyTemplate = (tmpl: { title: string; prompt: string; duration: string; mood?: string }) => {
+      setPrompt(tmpl.prompt);
+      setTargetDuration(tmpl.duration);
+      if (tmpl.mood) setTargetMood(tmpl.mood);
+      document.querySelector('form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     };
 
     return (
@@ -1821,15 +1772,30 @@ export default function App() {
                 </div>
               </form>
 
-              {/* Dynamic Categories & Templates Panel (Perplexity-style "Try Computer") */}
+              {/* Dynamic Categories & Templates Panel */}
               <div className="bg-[#0e0e0e]/50 border border-white/5 rounded-[1.5rem] p-5 flex flex-col gap-4 backdrop-blur-md">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-white/40" />
-                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/40">Try a template</span>
+                <div className="flex flex-col gap-4 border-b border-white/5 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-[#fbbf24]" />
+                        <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#fbbf24]/80">Try a template</span>
+                      </div>
+                      <p className="text-xs text-white/45 font-medium leading-relaxed max-w-xl">
+                        Thirty-two LYGO desks. Lattice, mind, time, accord. Pick one that will not let you go.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isGenerating}
+                      onClick={() => applyTemplate(pickDeskTemplate())}
+                      className="shrink-0 px-3.5 py-1.5 rounded-full border border-[#fbbf24]/40 text-[#fbbf24] text-[10px] font-bold uppercase tracking-wider hover:bg-[#fbbf24]/10 disabled:opacity-50 cursor-pointer"
+                    >
+                      Surprise desk
+                    </button>
                   </div>
-                  <div className="flex gap-1 p-0.5 bg-white/[0.03] border border-white/5 rounded-full shrink-0">
-                    {templateCategories.map((cat) => (
+                  <div className="flex flex-wrap gap-1 p-0.5 bg-white/[0.03] border border-white/5 rounded-full w-fit">
+                    {DESK_CATEGORIES.map((cat) => (
                       <button
                         key={cat.id}
                         type="button"
@@ -1843,26 +1809,27 @@ export default function App() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                  {templates[selectedCategory].map((tmpl) => (
+                  {DESK_TEMPLATES[selectedCategory].map((tmpl) => (
                     <button
                       key={tmpl.title}
                       type="button"
-                      onClick={() => {
-                        setPrompt(tmpl.prompt);
-                        setTargetDuration(tmpl.duration);
-                        document.querySelector('form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }}
+                      onClick={() => applyTemplate(tmpl)}
                       disabled={isGenerating}
-                      className="text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.04] active:bg-white/[0.06] transition-all duration-200 group relative overflow-hidden cursor-pointer"
+                      className="text-left p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-[#14b8a6]/40 hover:bg-white/[0.04] active:bg-white/[0.06] transition-all duration-200 group relative overflow-hidden cursor-pointer"
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-bold text-white/90 group-hover:text-white transition-colors">
                           {tmpl.title}
                         </span>
-                        <span className="text-xs text-white/30 group-hover:text-white/70 transition-transform group-hover:translate-x-0.5 font-bold">→</span>
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-[#5eead4]/80 shrink-0">
+                          {tmpl.duration}m
+                        </span>
                       </div>
-                      <p className="text-xs text-white/50 mt-1 font-medium leading-relaxed group-hover:text-white/75 transition-colors">
+                      <p className="text-xs text-white/50 mt-1.5 font-medium leading-relaxed group-hover:text-white/75 transition-colors">
                         {tmpl.desc}
+                      </p>
+                      <p className="mt-2 text-[10px] font-bold tracking-wider uppercase text-white/25 group-hover:text-[#fbbf24]/70 transition-colors">
+                        {tmpl.mood} · load prompt →
                       </p>
                     </button>
                   ))}
