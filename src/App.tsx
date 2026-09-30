@@ -5,7 +5,7 @@ import {
   TerminalSquare, CheckCircle2, Loader2, Bot, Download, Lock, Key, ShieldAlert, Check,
   HelpCircle, User, AlertCircle, RefreshCw, Trash2, ChevronLeft, Share2, Copy, ExternalLink, Globe
 } from 'lucide-react';
-import { MOCK_SHOW, transformShow } from './data';
+import { MOCK_SHOW, SIGNAL_SHOWS, isForeignDefaultShow, transformShow } from './data';
 import { Transcript } from './components/Transcript';
 import { saveUserShow, getUserShows, deleteUserShow } from './lib/clientDb';
 import { GATES_OPEN, LOCAL_OPERATOR, UNLIMITED_QUOTA } from './lib/gates';
@@ -188,7 +188,7 @@ function SignalFooter() {
 export default function App() {
   const [view, setView] = useState<'home' | 'player' | 'generating'>('home');
   const [selectedShow, setSelectedShow] = useState(MOCK_SHOW);
-  const [library, setLibrary] = useState([MOCK_SHOW]);
+  const [library, setLibrary] = useState(SIGNAL_SHOWS);
   
   // --- SHARING FLOW STATES ---
   const [isSharedPlaybackMode, setIsSharedPlaybackMode] = useState(false);
@@ -555,17 +555,22 @@ export default function App() {
         .then(res => res.json())
         .then((shows: any[]) => {
           const transformedShows = (shows && shows.length > 0)
-            ? shows.map(show => transformShow({
-                ...show,
-                coverImage: show.coverImage || "https://www.gstatic.com/aistudio/starter-apps/assets/ai_radio/cover.jpg"
-              }))
+            ? shows
+                .filter((show: any) => !isForeignDefaultShow(show))
+                .map((show: any) => transformShow({
+                  ...show,
+                  coverImage: show.coverImage || "https://chatagent.ca/signal/art/signal-og.jpg"
+                }))
             : [];
 
-          // Merge: user shows + fetched public shows + baseline pre-generated show
-          const merged = [...userShows, ...transformedShows, MOCK_SHOW];
+          const merged = [
+            ...userShows.filter((s: any) => !isForeignDefaultShow(s)),
+            ...transformedShows,
+            ...SIGNAL_SHOWS,
+          ];
           const uniqueShows = merged.filter((show, index, self) =>
             index === self.findIndex((s) => s.title === show.title)
-          );
+          ).filter((show) => !isForeignDefaultShow(show));
 
           setLibrary(uniqueShows);
           if (!isShared && uniqueShows.length > 0) {
@@ -573,11 +578,14 @@ export default function App() {
           }
         })
         .catch(err => {
-          console.error("Error loading public shows, using local fallback shows:", err);
-          const merged = [...userShows, MOCK_SHOW];
+          console.error("Error loading public shows, using Signal library:", err);
+          const merged = [
+            ...userShows.filter((s: any) => !isForeignDefaultShow(s)),
+            ...SIGNAL_SHOWS,
+          ];
           const uniqueShows = merged.filter((show, index, self) =>
             index === self.findIndex((s) => s.title === show.title)
-          );
+          ).filter((show) => !isForeignDefaultShow(show));
           setLibrary(uniqueShows);
           if (!isShared && uniqueShows.length > 0) {
             setSelectedShow(uniqueShows[0]);
@@ -1607,12 +1615,9 @@ export default function App() {
         <RainbowBackground />
 
         <div className="relative z-10 w-full h-full overflow-y-auto">
-          <div className="max-w-4xl mx-auto space-y-12 p-6 md:p-16">
-            <SignalNav />
-
-            {/* Hero / Generator */}
+          <div className="max-w-4xl mx-auto space-y-10 p-5 md:p-10 pt-6 md:pt-8">
             <section className="space-y-8">
-              <div className="text-center space-y-3 mb-10 select-none">
+              <div className="text-center space-y-3 mb-4 select-none">
                 <motion.h1
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1766,12 +1771,16 @@ export default function App() {
               </div>
             </section>
 
+            <SignalNav />
+
             {/* Library */}
             <section className="space-y-6 pt-4">
               <div className="space-y-1">
-                <h3 id="library-section" className="text-xl md:text-2xl font-bold tracking-tight text-white/90">Radio Show Library</h3>
+                <h3 id="library-section" className="text-xl md:text-2xl font-bold tracking-tight text-white/90">LYGO Signal Library</h3>
                 <p className="text-xs text-white/45 font-medium leading-relaxed">
-                  You can immediately play and listen to these pre-generated shows to preview the experience.
+                  Defaults from{' '}
+                  <a href="https://chatagent.ca/signal/" rel="noopener" className="text-[#5eead4] underline underline-offset-4">chatagent.ca/signal</a>
+                  {' '}— Studio Desk first, then the Signal episodes. Play one, or generate your own above.
                 </p>
               </div>
               <div className="space-y-4 pb-32">
