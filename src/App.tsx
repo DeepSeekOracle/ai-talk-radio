@@ -1933,7 +1933,7 @@ export default function App() {
                 <h4 className="text-xs font-black uppercase text-white tracking-wide truncate">{selectedShow.title}</h4>
                 <p className="text-[10px] text-white/50 font-bold tracking-wider uppercase truncate mt-0.5 flex items-center gap-1">
                   <Radio className="w-3.5 h-3.5 text-io-blue shrink-0" />
-                  <span>{selectedShow.host}</span>
+                  <span>{selectedShow.station || "LYGO Signal"} · {selectedShow.host}</span>
                 </p>
               </div>
             </div>
@@ -2013,15 +2013,15 @@ export default function App() {
 
                 <div className="space-y-8">
                   <div className="space-y-3">
-                    <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 flex items-center gap-2">
-                      <div className="w-4 h-[1px] bg-io-blue" /> Episode
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#5eead4] flex items-center gap-2">
+                      <div className="w-4 h-[1px] bg-[#14b8a6]" /> {selectedShow.station || "LYGO Signal"}
                     </h3>
                     <p className="text-xl font-bold leading-tight">{selectedShow.title}</p>
                   </div>
 
                   <div className="space-y-3">
                     <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 flex items-center gap-2">
-                      <div className="w-4 h-[1px] bg-io-green" /> Concept
+                      <div className="w-4 h-[1px] bg-io-green" /> How this desk read the prompt
                     </h3>
                     <p className="text-sm leading-relaxed text-white/70 font-medium">
                       {selectedShow.summary}
@@ -2185,7 +2185,7 @@ export default function App() {
                   <div className="flex flex-col md:flex-row md:items-baseline md:gap-3 text-left">
                     <div className="flex items-center gap-2 max-w-full">
                       <span className="text-white text-xs md:text-sm tracking-wider font-extrabold uppercase truncate block">
-                        {selectedShow.title}
+                        {(selectedShow.station || "LYGO Signal") + " · " + selectedShow.title}
                       </span>
                       {/* Subtle toggle badge on mobile */}
                       <button 

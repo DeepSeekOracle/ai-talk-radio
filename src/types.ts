@@ -19,6 +19,7 @@ export interface RawRadioShow {
   isUserGenerated?: boolean;
   script?: string;
   sources?: string[];
+  station?: string;
 }
 
 export interface TranscriptLine {
@@ -47,4 +48,5 @@ export interface RadioShow {
   script?: string;
   sources?: string[];
   audioBlob?: Blob;
+  station?: string;
 }

@@ -367,6 +367,7 @@ export async function runBrowserShow(opts: {
     show_title: written.title,
     show_duration: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`,
     two_sentence_summary: written.summary,
+    station: "LYGO Signal",
     sources: written.sources,
     date_of_generation: new Date().toISOString().slice(0, 10),
     timecoded_transcript: transcript,

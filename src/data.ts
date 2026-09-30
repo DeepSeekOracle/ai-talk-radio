@@ -30,6 +30,7 @@ export function transformShow(raw: RawRadioShow): RadioShow {
     transcript,
     script: raw.script,
     sources: raw.sources,
+    station: raw.station || "LYGO Signal",
   };
 }
 

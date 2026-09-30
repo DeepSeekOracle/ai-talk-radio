@@ -127,6 +127,75 @@ function cleanQuery(topic: string): string {
     .slice(0, 180);
 }
 
+const STOP = new Set(
+  "a an and are as at be by for from how if in into is it its just now of on or the this to was were what when where which who why with about generate radio show called based top hacker news stories please make me talk segment discussion podcast episode write a full minutes minute".split(
+    " ",
+  ),
+);
+
+function titleCase(s: string): string {
+  return s
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => (w === w.toUpperCase() && w.length > 1 ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+    .join(" ");
+}
+
+/** Short noun phrase from the user's prompt — never a Wikipedia headline. */
+export function topicCore(topic: string): string {
+  const q = cleanQuery(topic);
+  const words = q
+    .replace(/['’]/g, "")
+    .split(/[^A-Za-z0-9ΔΦ0-9]+/)
+    .filter((w) => w.length > 1 && !STOP.has(w.toLowerCase()));
+  const keep = words.slice(0, 6);
+  return titleCase(keep.join(" ")) || "Open Hour";
+}
+
+/**
+ * Unique episode title for this generation.
+ * Station identity stays LYGO Signal; the episode name is minted from the prompt.
+ */
+export function mintEpisodeTitle(
+  topic: string,
+  mood: string,
+  minutes: number,
+  rand: () => number,
+): string {
+  const core = topicCore(topic);
+  const chill = /chill|late|calm|quiet|night/i.test(mood);
+  const frames = chill
+    ? [
+        `Late Desk: ${core}`,
+        `Quiet Hour — ${core}`,
+        `On the Dial: ${core}`,
+        `LYGO Signal: ${core}`,
+        `The ${core} Watch`,
+      ]
+    : [
+        core,
+        `The ${core}`,
+        `Studio Desk: ${core}`,
+        `LYGO Signal — ${core}`,
+        `${core} on the Dial`,
+        `Roundtable: ${core}`,
+        `${minutes} Minutes on ${core}`,
+        `The ${core} Brief`,
+      ];
+  let title = frames[Math.floor(rand() * frames.length)];
+  if (title.length > 64) title = core.length > 64 ? core.slice(0, 61) + "…" : core;
+  return title;
+}
+
+export function mintEpisodeSummary(
+  title: string,
+  minutes: number,
+  callers: Array<{ name: string }>,
+): string {
+  const names = callers.map((c) => c.name).join(", ");
+  return `LYGO Signal reads your prompt as a live ${minutes}-minute desk. ${title}. ${names} take the roundtable until the clock is honest.`;
+}
+
 async function wikiSearch(q: string, limit: number): Promise<string[]> {
   const url =
     "https://en.wikipedia.org/w/api.php?action=query&list=search&utf8=1&format=json&origin=*" +
@@ -339,14 +408,14 @@ export function writeUniqueScript(
   const minutes = parseMinutes(duration);
   const targetWords = targetWordsFor(minutes);
   const targetSeconds = targetSecondsFor(minutes);
-  const rand = rng(topic + "|" + minutes + "|" + mood + "|" + (bits[0]?.title || ""));
+  const salt = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const rand = rng(topic + "|" + minutes + "|" + mood + "|" + salt);
   const rawFacts = factPool(bits);
   const facts = stretchFacts(rawFacts, bits[0]?.title || cleanQuery(topic), Math.ceil(targetWords / 18));
-  const callers = pickCallers(topic, 3);
+  const callers = pickCallers(topic + salt, 3);
   const chill = /chill|late|calm|quiet|night/i.test(mood);
   const debate = /debate|argument|hot/i.test(mood) || minutes >= 10;
-  const main = bits[0]?.title || cleanQuery(topic) || "Tonight's brief";
-  const title = main.length > 72 ? main.slice(0, 69) + "…" : main;
+  const title = mintEpisodeTitle(topic, mood, minutes, rand);
 
   const turns: ShowTurn[] = [];
   const hook = facts[0];
@@ -391,20 +460,14 @@ export function writeUniqueScript(
   const last = facts[Math.min(facts.length - 1, Math.max(2, factI - 1))];
   turns.push({
     speaker: "Paul",
-    text: `${spoken(last, false, rand)} That is a full ${minutes} minutes on ${title}. My thanks to ${callers.map((c) => `${c.name} in ${c.city}`).join(", ")}. This is AI Talk Radio. Keep the transmitter honest.`,
+    text: `${spoken(last, false, rand)} That is a full ${minutes} minutes on ${title}. My thanks to ${callers.map((c) => `${c.name} in ${c.city}`).join(", ")}. This is LYGO Signal. Keep the transmitter honest.`,
   });
 
   const leftover = facts.slice(factI);
-  const summary = facts
-    .slice(0, 2)
-    .join(" ")
-    .slice(0, 360);
 
   return {
     title,
-    summary:
-      summary ||
-      `A ${minutes}-minute roundtable on ${title}. ${callers.map((c) => c.name).join(", ")} with Paul at the desk.`,
+    summary: mintEpisodeSummary(title, minutes, callers),
     script: toScript(title, turns),
     sources: [...new Set(bits.map((b) => b.source))],
     turns,
