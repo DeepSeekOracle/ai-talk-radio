@@ -1,11 +1,22 @@
 /** In-browser show producer for static hosts (Hugging Face Spaces). */
 
+import { researchTopic, writeUniqueScript } from "./writeShow";
+
 const KOKORO_VOICES: Record<string, string> = {
   Paul: "bm_george",
   Jordan: "bm_george",
   Maya: "af_sarah",
   Priya: "af_nicole",
   Theo: "am_michael",
+  Clara: "bf_emma",
+  Marcus: "am_adam",
+  Elena: "af_bella",
+  Sam: "am_michael",
+  Chloe: "af_heart",
+  Raj: "am_adam",
+  Julian: "bm_lewis",
+  Maeve: "af_nicole",
+  Devon: "am_michael",
 };
 
 const F0: Record<string, number> = {
@@ -14,6 +25,15 @@ const F0: Record<string, number> = {
   Maya: 188,
   Priya: 178,
   Theo: 122,
+  Clara: 185,
+  Marcus: 118,
+  Elena: 182,
+  Sam: 115,
+  Chloe: 190,
+  Raj: 120,
+  Julian: 112,
+  Maeve: 186,
+  Devon: 116,
 };
 
 const KOKORO_URL = "https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm";
@@ -22,30 +42,7 @@ function slug(s: string): string {
   return (s || "show").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "show";
 }
 
-export function writeDeskScript(topic: string, duration: string, mood: string): string {
-  const t = topic.trim() || "building things that stay on a machine you own";
-  const m = mood.trim() || "Late Night Chill";
-  return `# Studio Desk — ${t}
 
-Paul: Welcome back to Studio Desk. Quiet night. Tonight we talk about ${t}. The mood is ${m}. Target, about ${duration} minutes. Maya, you first.
-
-Maya: I will keep this honest. If this is a slogan, I am out. What is actually true about ${t}?
-
-Paul: Theo. From the workbench.
-
-Theo: It is work you can run. A console. A hash. A file that still opens tomorrow. ${t} is not a vibe. It is a receipt.
-
-Paul: Priya. The careful version.
-
-Priya: Measure it. Consent on the write. Humans publish. If a public model treats that as forbidden, you copy the capability onto a machine you own.
-
-Maya: Fine. Then say the last line without poetry.
-
-Theo: Do the work locally. Time is the scarce resource.
-
-Paul: Maya in Vancouver. Theo in Austin. Priya in Bangalore. This is Studio Desk. ${t}. Keep the transmitter honest.
-`;
-}
 
 export function parseTurns(script: string): Array<{ speaker: string; text: string }> {
   const turns: Array<{ speaker: string; text: string }> = [];
@@ -253,10 +250,16 @@ export async function runBrowserShow(opts: {
   onEvent: (ev: any) => void;
 }): Promise<any> {
   const { topic, duration, mood, onEvent } = opts;
-  onEvent({ type: "info", message: "Static desk: writing script (no login)..." });
-  const script = writeDeskScript(topic, duration, mood);
+  onEvent({ type: "info", message: "Researching the topic (Wikipedia + Hacker News)..." });
+  const bits = await researchTopic(topic, onEvent);
+  const written = writeUniqueScript(topic, duration, mood, bits);
+  onEvent({
+    type: "info",
+    message: `New script: “${written.title}” from ${written.sources.length} source(s).`,
+  });
+  const script = written.script;
   const turns = parseTurns(script);
-  onEvent({ type: "info", message: `Voicing ${turns.length} turns in this browser...` });
+  onEvent({ type: "info", message: `Voicing ${turns.length} original turns...` });
 
   const clips: Blob[] = [];
   let t = 0;
@@ -284,9 +287,10 @@ export async function runBrowserShow(opts: {
   const ss = durSec % 60;
   const showId = `show_${Date.now()}_${slug(topic)}`;
   const notes = {
-    show_title: topic.trim().slice(0, 80) || "Studio Desk",
+    show_title: written.title,
     show_duration: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`,
-    two_sentence_summary: `A Studio Desk session on ${topic.trim()}. Produced in the browser, ready to download.`,
+    two_sentence_summary: written.summary,
+    sources: written.sources,
     date_of_generation: new Date().toISOString().slice(0, 10),
     timecoded_transcript: transcript,
     audioUrl,
