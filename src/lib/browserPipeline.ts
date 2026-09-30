@@ -1,6 +1,12 @@
 /** In-browser show producer for static hosts (Hugging Face Spaces). */
 
-import { researchTopic, writeUniqueScript } from "./writeShow";
+import {
+  researchTopic,
+  writeUniqueScript,
+  writeMoreTurns,
+  parseMinutes,
+  targetWordsFor,
+} from "./writeShow";
 
 const KOKORO_VOICES: Record<string, string> = {
   Paul: "bm_george",
@@ -191,12 +197,29 @@ async function getKokoro(onEvent: (ev: any) => void): Promise<any | null> {
   }
 }
 
-async function speakTurn(speaker: string, text: string, onEvent: (ev: any) => void): Promise<Blob> {
+function splitForTts(text: string, max = 340): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return [clean];
+  const parts: string[] = [];
+  let buf = "";
+  for (const s of clean.split(/(?<=[.!?])\s+/)) {
+    if ((buf + " " + s).trim().length > max && buf) {
+      parts.push(buf.trim());
+      buf = s;
+    } else {
+      buf = buf ? `${buf} ${s}` : s;
+    }
+  }
+  if (buf.trim()) parts.push(buf.trim());
+  return parts.length ? parts : [clean.slice(0, max)];
+}
+
+async function speakOnce(speaker: string, text: string, onEvent: (ev: any) => void): Promise<Blob> {
   const engine = await getKokoro(onEvent);
   if (engine) {
     try {
       const voice = KOKORO_VOICES[speaker] || "am_michael";
-      const audio = await engine.generate(text, { voice, speed: 0.9 });
+      const audio = await engine.generate(text, { voice, speed: 0.86 });
       return await rawToWav(audio);
     } catch (err: any) {
       onEvent({
@@ -206,6 +229,24 @@ async function speakTurn(speaker: string, text: string, onEvent: (ev: any) => vo
     }
   }
   return formantSpeak(text, speaker);
+}
+
+async function speakTurn(speaker: string, text: string, onEvent: (ev: any) => void): Promise<Blob> {
+  const chunks = splitForTts(text);
+  if (chunks.length === 1) return speakOnce(speaker, chunks[0], onEvent);
+  const blobs: Blob[] = [];
+  for (const c of chunks) blobs.push(await speakOnce(speaker, c, onEvent));
+  return mixBlobs(blobs, 0.28);
+}
+
+async function blobSeconds(blob: Blob): Promise<number> {
+  const ctx = new AudioContext();
+  try {
+    const buf = await ctx.decodeAudioData((await blob.arrayBuffer()).slice(0));
+    return buf.duration;
+  } finally {
+    await ctx.close();
+  }
 }
 
 async function mixBlobs(blobs: Blob[], gapSec: number): Promise<Blob> {
@@ -250,42 +291,78 @@ export async function runBrowserShow(opts: {
   onEvent: (ev: any) => void;
 }): Promise<any> {
   const { topic, duration, mood, onEvent } = opts;
-  onEvent({ type: "info", message: "Researching the topic (Wikipedia + Hacker News)..." });
-  const bits = await researchTopic(topic, onEvent);
-  const written = writeUniqueScript(topic, duration, mood, bits);
+  const minutes = parseMinutes(duration);
+  const targetSec = minutes * 60;
   onEvent({
     type: "info",
-    message: `New script: “${written.title}” from ${written.sources.length} source(s).`,
+    message: `Writing a full ${minutes}-minute show (~${targetWordsFor(minutes)} spoken words).`,
   });
-  const script = written.script;
-  const turns = parseTurns(script);
-  onEvent({ type: "info", message: `Voicing ${turns.length} original turns...` });
+  const bits = await researchTopic(topic, onEvent, minutes);
+  const written = writeUniqueScript(topic, String(minutes), mood, bits);
+  onEvent({
+    type: "info",
+    message: `Script “${written.title}”: ${written.wordCount} words, ${written.turns.length} turns, target ${minutes}:00.`,
+  });
 
   const clips: Blob[] = [];
-  let t = 0;
   const transcript: Array<{ timecode: string; speaker: string; text: string }> = [];
-  for (let i = 0; i < turns.length; i++) {
-    const turn = turns[i];
-    onEvent({ type: "info", message: `TTS ${i + 1}/${turns.length}: ${turn.speaker}` });
-    const blob = await speakTurn(turn.speaker, turn.text, onEvent);
-    clips.push(blob);
-    const mm = Math.floor(t / 60);
-    const ss = Math.floor(t % 60);
-    transcript.push({
-      timecode: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`,
-      speaker: turn.speaker,
-      text: turn.text,
+  let clock = 0;
+  let voiced = 0;
+
+  const voiceTurns = async (list: Array<{ speaker: string; text: string }>, totalHint: number) => {
+    for (const turn of list) {
+      voiced++;
+      onEvent({
+        type: "info",
+        message: `TTS ${voiced}${totalHint ? "/" + totalHint : ""}: ${turn.speaker}  (${fmt(clock)} on the clock)`,
+      });
+      const blob = await speakTurn(turn.speaker, turn.text, onEvent);
+      const sec = await blobSeconds(blob);
+      const mm = Math.floor(clock / 60);
+      const ss = Math.floor(clock % 60);
+      transcript.push({
+        timecode: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`,
+        speaker: turn.speaker,
+        text: turn.text.replace(/\[[^\]]*\]/g, "").replace(/\s+/g, " ").trim(),
+      });
+      clips.push(blob);
+      clock += sec + 0.7;
+    }
+  };
+
+  const body = written.turns.slice(0, Math.max(1, written.turns.length - 1));
+  const closing = written.turns[written.turns.length - 1];
+  await voiceTurns(body, written.turns.length);
+
+  let expand = 0;
+  while (clock < targetSec * 0.96 && expand < 4) {
+    expand++;
+    const remain = Math.max(40, Math.round((targetSec - clock) * (132 / 60)));
+    onEvent({
+      type: "info",
+      message: `Show is at ${fmt(clock)} / ${minutes}:00. Writing more of the roundtable (${remain} words)...`,
     });
-    t += Math.max(4, turn.text.split(/\s+/).length / 2.2) + 0.65;
+    const extra = writeMoreTurns(written, remain, `${topic}|${expand}|${clock}`);
+    if (!extra.length) break;
+    written.turns = [...written.turns.slice(0, -1), ...extra, closing];
+    written.script = [`# ${written.title}`, "", ...written.turns.map((t) => `${t.speaker}: ${t.text}`)].join("\n");
+    await voiceTurns(extra, 0);
   }
 
-  onEvent({ type: "info", message: "Mixing the show..." });
-  const wav = await mixBlobs(clips, 0.65);
+  if (closing) await voiceTurns([closing], voiced + 1);
+
+  onEvent({ type: "info", message: `Mixing the full ${minutes}-minute desk...` });
+  const wav = await mixBlobs(clips, 0.7);
+  const mixedSec = await blobSeconds(wav);
   const audioUrl = URL.createObjectURL(wav);
-  const durSec = Math.round(t);
+  const durSec = Math.max(1, Math.round(mixedSec));
   const mm = Math.floor(durSec / 60);
   const ss = durSec % 60;
   const showId = `show_${Date.now()}_${slug(topic)}`;
+  onEvent({
+    type: "info",
+    message: `Mixed length ${fmt(durSec)} (asked ${minutes}:00).`,
+  });
   const notes = {
     show_title: written.title,
     show_duration: `${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`,
@@ -298,10 +375,16 @@ export async function runBrowserShow(opts: {
     coverImage: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop",
     isUserGenerated: true,
     showId,
-    script,
+    script: written.script,
     audioBlobType: wav.type,
+    targetMinutes: minutes,
   };
   onEvent({ type: "show_data", data: notes });
   onEvent({ type: "status", status: "completed" });
   return notes;
+}
+
+function fmt(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }

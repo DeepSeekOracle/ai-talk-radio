@@ -145,7 +145,7 @@ export default function App() {
   const [activePrompt, setActivePrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [targetDuration, setTargetDuration] = useState('3');
+  const [targetDuration, setTargetDuration] = useState('5');
   const [targetMood, setTargetMood] = useState('Informative');
   const [selectedCategory, setSelectedCategory] = useState<'tech' | 'culture' | 'news'>('tech');
 
@@ -1566,13 +1566,13 @@ export default function App() {
           title: "Daily Hacker Bites",
           desc: "Voice a digest of the top stories currently on Hacker News",
           prompt: "Generate a radio show called Daily Hacker Bites based on top Hacker News stories.",
-          duration: "3"
+          duration: "5"
         },
         {
           title: "GitHub Roundtable",
           desc: "Review the AlphaFold 3 repository and Google DeepMind's biology model",
           prompt: "Generate a radio show with a roundtable concept, educating listeners about https://github.com/google-deepmind/alphafold3.",
-          duration: "3"
+          duration: "5"
         }
       ],
       culture: [
@@ -1580,13 +1580,13 @@ export default function App() {
           title: "Philosophy Café",
           desc: "Host an atmospheric debate analyzing existentialism and humanity's future",
           prompt: "Generate a thought-provoking discussion in a cozy café setting discussing existential questions.",
-          duration: "3"
+          duration: "5"
         },
         {
           title: "Cinematic Reviews",
           desc: "Break down the visual style & legacy of iconic film directors",
           prompt: "Generate a talk radio segment analyzing the distinct visual styles of movie directors.",
-          duration: "3"
+          duration: "5"
         }
       ],
       news: [
@@ -1594,13 +1594,13 @@ export default function App() {
           title: "Sports Tournament Debate",
           desc: "Lively debate about preparations and predictions for a major tournament",
           prompt: "Generate a lively sports debate about preparations for a major upcoming tournament.",
-          duration: "3"
+          duration: "5"
         },
         {
           title: "Fintech Briefing",
           desc: "Explain decentralized finance developments and global stock market trends",
           prompt: "Generate a radio segment providing an interactive briefing on fintech and global markets.",
-          duration: "3"
+          duration: "5"
         }
       ]
     };

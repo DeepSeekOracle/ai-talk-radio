@@ -6,12 +6,45 @@ export type ResearchBit = {
   source: string;
 };
 
+export type ShowTurn = { speaker: string; text: string };
+
 export type WrittenShow = {
   title: string;
   summary: string;
   script: string;
   sources: string[];
+  turns: ShowTurn[];
+  leftover: string[];
+  callers: Array<{ name: string; city: string; tag: string }>;
+  targetSeconds: number;
+  wordCount: number;
 };
+
+export function parseMinutes(duration: string): number {
+  const n = parseFloat(String(duration || "5"));
+  if (!Number.isFinite(n) || n <= 0) return 5;
+  if (n >= 13) return 15;
+  if (n >= 8) return 10;
+  if (n >= 4) return 5;
+  return 3;
+}
+
+/** Spoken-word budget. Chill Kokoro ~120–130 wpm plus gaps. */
+export function targetWordsFor(minutes: number): number {
+  return Math.round(minutes * 132);
+}
+
+export function targetSecondsFor(minutes: number): number {
+  return minutes * 60;
+}
+
+export function countWords(text: string): number {
+  return String(text || "")
+    .replace(/\[[^\]]*\]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
 
 const CALLERS = [
   { name: "Clara", city: "Edinburgh", tag: "[Female] [Accent: Scottish]" },
@@ -57,7 +90,7 @@ function sentences(text: string): string[] {
     .replace(/\s+/g, " ")
     .split(/(?<=[.!?])\s+/)
     .map((s) => s.trim())
-    .filter((s) => s.length > 40 && s.length < 320)
+    .filter((s) => s.length > 28 && s.length < 420)
     .filter((s) => !/cookie|subscribe|sign up|newsletter/i.test(s));
 }
 
@@ -94,46 +127,52 @@ function cleanQuery(topic: string): string {
     .slice(0, 180);
 }
 
-async function wikiSearch(q: string): Promise<string[]> {
+async function wikiSearch(q: string, limit: number): Promise<string[]> {
   const url =
     "https://en.wikipedia.org/w/api.php?action=query&list=search&utf8=1&format=json&origin=*" +
-    `&srlimit=5&srsearch=${encodeURIComponent(q)}`;
+    `&srlimit=${Math.max(5, Math.min(15, limit))}&srsearch=${encodeURIComponent(q)}`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
   return (data?.query?.search || []).map((s: any) => String(s.title || "")).filter(Boolean);
 }
 
-async function wikiExtract(title: string): Promise<ResearchBit | null> {
-  const url =
-    "https://en.wikipedia.org/w/api.php?action=query&prop=extracts|description&exintro=0&explaintext=1&exchars=1800" +
-    `&format=json&origin=*&redirects=1&titles=${encodeURIComponent(title)}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const pages = data?.query?.pages || {};
-  const page = Object.values(pages)[0] as any;
-  if (!page || page.missing || !page.extract) return null;
-  return {
-    title: page.title || title,
-    text: String(page.extract),
-    source: `Wikipedia: ${page.title || title}`,
-  };
+async function wikiExtractMany(titles: string[]): Promise<ResearchBit[]> {
+  const out: ResearchBit[] = [];
+  for (let i = 0; i < titles.length; i += 8) {
+    const chunk = titles.slice(i, i + 8);
+    const url =
+      "https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=0&explaintext=1&exchars=5000" +
+      `&format=json&origin=*&redirects=1&titles=${chunk.map(encodeURIComponent).join("|")}`;
+    const res = await fetch(url);
+    if (!res.ok) continue;
+    const data = await res.json();
+    const pages = data?.query?.pages || {};
+    for (const page of Object.values(pages) as any[]) {
+      if (!page || page.missing || !page.extract) continue;
+      out.push({
+        title: page.title,
+        text: String(page.extract),
+        source: `Wikipedia: ${page.title}`,
+      });
+    }
+  }
+  return out;
 }
 
-async function hnHits(q: string, front: boolean): Promise<ResearchBit[]> {
+async function hnHits(q: string, front: boolean, limit: number): Promise<ResearchBit[]> {
   const url = front
-    ? "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=8"
-    : `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=6`;
+    ? `https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=${limit}`
+    : `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=${limit}`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
   return (data?.hits || [])
     .filter((h: any) => h.title && (h.url || h.story_text || h.title))
-    .slice(0, 6)
+    .slice(0, limit)
     .map((h: any) => ({
       title: String(h.title),
-      text: `${h.title}. ${h.story_text || ""} Points ${h.points || 0}. ${h.url || ""}`.trim(),
+      text: `${h.title}. ${h.story_text || h.comment_text || ""} Points ${h.points || 0}. ${h.num_comments || 0} comments. ${h.url || ""}`.trim(),
       source: `Hacker News: ${h.title}`,
     }));
 }
@@ -141,9 +180,12 @@ async function hnHits(q: string, front: boolean): Promise<ResearchBit[]> {
 export async function researchTopic(
   topic: string,
   onEvent?: (ev: any) => void,
+  minutes = 5,
 ): Promise<ResearchBit[]> {
   const q = cleanQuery(topic) || topic.trim();
   const wantHn = /hacker news|\bhn\b|front page/i.test(topic);
+  const wikiN = minutes >= 15 ? 12 : minutes >= 10 ? 8 : 5;
+  const hnN = minutes >= 10 ? 12 : 8;
   const bits: ResearchBit[] = [];
   const seen = new Set<string>();
   const add = (b: ResearchBit | null) => {
@@ -154,30 +196,31 @@ export async function researchTopic(
     bits.push(b);
   };
 
-  onEvent?.({ type: "info", message: `Researching “${q.slice(0, 80)}”...` });
+  onEvent?.({
+    type: "info",
+    message: `Researching a full ${minutes}-minute show on “${q.slice(0, 80)}”...`,
+  });
 
   try {
     if (wantHn) {
       onEvent?.({ type: "info", message: "Pulling Hacker News front page..." });
-      for (const h of await hnHits(q, true)) add(h);
+      for (const h of await hnHits(q, true, hnN)) add(h);
     }
   } catch {
     /* keep going */
   }
 
   try {
-    const titles = await wikiSearch(q);
-    onEvent?.({ type: "info", message: `Wikipedia hits: ${titles.slice(0, 3).join(" · ") || "none"}` });
-    for (const title of titles.slice(0, 4)) {
-      add(await wikiExtract(title));
-    }
+    const titles = await wikiSearch(q, wikiN);
+    onEvent?.({ type: "info", message: `Wikipedia hits: ${titles.slice(0, 4).join(" · ") || "none"}` });
+    for (const b of await wikiExtractMany(titles.slice(0, wikiN))) add(b);
   } catch {
     /* keep going */
   }
 
   if (!wantHn) {
     try {
-      for (const h of await hnHits(q, false)) add(h);
+      for (const h of await hnHits(q, false, hnN)) add(h);
     } catch {
       /* keep going */
     }
@@ -190,6 +233,10 @@ export async function researchTopic(
       source: "operator prompt",
     });
   }
+  onEvent?.({
+    type: "info",
+    message: `Research packed: ${bits.length} sources, ${factPool(bits).length} usable lines.`,
+  });
   return bits;
 }
 
@@ -209,9 +256,78 @@ function factPool(bits: ResearchBit[]): string[] {
   return out;
 }
 
-function targetTurns(duration: string): number {
-  const n = parseFloat(duration) || 3;
-  return Math.max(8, Math.min(28, Math.round(n * 3.2)));
+function packTurn(facts: string[], start: number, n: number, messy: boolean, rand: () => number): { text: string; next: number } {
+  const parts: string[] = [];
+  let i = start;
+  const take = Math.max(2, n);
+  for (let k = 0; k < take && i < facts.length; k++, i++) {
+    parts.push(spoken(facts[i], messy && k === 0, rand));
+  }
+  if (!parts.length && facts.length) {
+    parts.push(spoken(facts[start % facts.length], messy, rand));
+    i = start + 1;
+  }
+  return { text: parts.join(" "), next: i };
+}
+
+function stretchFacts(facts: string[], title: string, need: number): string[] {
+  const out = [...facts];
+  const frames = [
+    (f: string) => `Hold that against a machine you own. ${f} If you cannot open the file later, it is only a story.`,
+    (f: string) => `The careful version is slower. ${f} Time is the scarce resource, not the slogan.`,
+    (f: string) => `Someone will try to wrap this in a product. ${f} The desk still has to run without that wrapper.`,
+    (f: string) => `I keep coming back to the receipt. ${f} A hash, a log, a page you can quote.`,
+    (f: string) => `There is a tidy demo and then there is Tuesday. ${f} Tuesday is the one that counts.`,
+    (f: string) => `For ${title}, the public write-up is only the start. ${f} The work is what you can repeat.`,
+  ];
+  let i = 0;
+  while (out.length < need) {
+    const f = facts[i % Math.max(1, facts.length)] || `${title} is the thread.`;
+    out.push(frames[i % frames.length](f));
+    i++;
+  }
+  return out;
+}
+
+function toScript(title: string, turns: ShowTurn[]): string {
+  return [`# ${title}`, "", ...turns.map((t) => `${t.speaker}: ${t.text}`)].join("\n");
+}
+
+function wordsInTurns(turns: ShowTurn[]): number {
+  return turns.reduce((n, t) => n + countWords(t.text), 0);
+}
+
+export function writeMoreTurns(
+  written: WrittenShow,
+  extraWords: number,
+  seed: string,
+): ShowTurn[] {
+  const rand = rng(seed + "|more|" + extraWords);
+  const facts = written.leftover.length ? written.leftover : stretchFacts([], written.title, 24);
+  const callers = written.callers;
+  const out: ShowTurn[] = [];
+  let fi = 0;
+  let si = 0;
+  let words = 0;
+  let guard = 0;
+  while (words < extraWords && guard < 80) {
+    guard++;
+    if (guard % 3 === 0) {
+      const next = callers[(si + 1) % callers.length];
+      const q = `Stay with ${next.name} in ${next.city}. What still has to be true after the demo for ${written.title}?`;
+      out.push({ speaker: "Paul", text: q });
+      words += countWords(q);
+      continue;
+    }
+    const who = callers[si % callers.length];
+    si++;
+    const pack = packTurn(facts, fi, 3, who.name !== "Priya", rand);
+    fi = pack.next % Math.max(1, facts.length);
+    out.push({ speaker: who.name, text: `${who.tag} ${pack.text}` });
+    words += countWords(pack.text);
+  }
+  written.leftover = facts.slice(fi);
+  return out;
 }
 
 export function writeUniqueScript(
@@ -220,73 +336,92 @@ export function writeUniqueScript(
   mood: string,
   bits: ResearchBit[],
 ): WrittenShow {
-  const rand = rng(topic + "|" + duration + "|" + mood + "|" + (bits[0]?.title || ""));
-  const facts = factPool(bits);
+  const minutes = parseMinutes(duration);
+  const targetWords = targetWordsFor(minutes);
+  const targetSeconds = targetSecondsFor(minutes);
+  const rand = rng(topic + "|" + minutes + "|" + mood + "|" + (bits[0]?.title || ""));
+  const rawFacts = factPool(bits);
+  const facts = stretchFacts(rawFacts, bits[0]?.title || cleanQuery(topic), Math.ceil(targetWords / 18));
   const callers = pickCallers(topic, 3);
   const chill = /chill|late|calm|quiet|night/i.test(mood);
-  const debate = /debate|argument|hot/i.test(mood) || rand() > 0.5;
+  const debate = /debate|argument|hot/i.test(mood) || minutes >= 10;
   const main = bits[0]?.title || cleanQuery(topic) || "Tonight's brief";
   const title = main.length > 72 ? main.slice(0, 69) + "…" : main;
-  const need = Math.max(6, targetTurns(duration) - 4);
-  while (facts.length < need) {
-    facts.push(
-      `${main} still has to be checked against a file you can open tomorrow, not a slogan.`,
-    );
-  }
-  const used = facts.slice(0, need);
-  const summary = used
-    .slice(0, 2)
-    .join(" ")
-    .slice(0, 320);
 
-  const lines: string[] = [`# ${title}`, ""];
-  const hook = used[0];
+  const turns: ShowTurn[] = [];
+  const hook = facts[0];
   if (chill) {
-    lines.push(
-      `Paul: Settle in. Quiet desk. Tonight we are looking at ${title}. ${hook}`,
-    );
+    turns.push({
+      speaker: "Paul",
+      text: `Settle in. Quiet desk. We have ${minutes} minutes, and we are going to use them. Tonight is ${title}. ${spoken(hook, false, rand)} I want this fully talked through, not a teaser.`,
+    });
   } else {
-    lines.push(`Paul: ${hook} That is the thread tonight. ${title}.`);
+    turns.push({
+      speaker: "Paul",
+      text: `${spoken(hook, false, rand)} That is the thread tonight: ${title}. We have ${minutes} minutes on the clock. Stay with the facts.`,
+    });
   }
-  lines.push(
-    `Paul: On the line: ${callers[0].name} in ${callers[0].city}, ${callers[1].name} in ${callers[1].city}, and ${callers[2].name} in ${callers[2].city}. ${callers[0].name}, you first.`,
-  );
+  turns.push({
+    speaker: "Paul",
+    text: `On the line: ${callers[0].name} in ${callers[0].city}, ${callers[1].name} in ${callers[1].city}, and ${callers[2].name} in ${callers[2].city}. We will go round the table until the hour is honest. ${callers[0].name}, you first. Take more than a headline.`,
+  });
 
   let factI = 1;
   let speakerI = 0;
-  const remaining = Math.max(4, targetTurns(duration) - 3);
-  for (let i = 0; i < remaining; i++) {
-    if (i % 3 === 2) {
+  let guard = 0;
+  while (wordsInTurns(turns) < targetWords - 90 && guard < 120) {
+    guard++;
+    if (guard % 4 === 0) {
       const next = callers[(speakerI + 1) % callers.length];
-      lines.push(
-        `Paul: ${next.name} in ${next.city}. ${debate ? "Push back if you have to." : "Take the next piece."}`,
-      );
-    } else {
-      const who = callers[speakerI % callers.length];
-      const fact = used[factI % used.length];
-      factI++;
-      const messy = who.name !== "Priya";
-      const take = spoken(fact, messy, rand);
-      const disagree =
-        debate && i % 4 === 3
-          ? " I do not buy the tidy version of that."
-          : "";
-      lines.push(`${who.name}: ${who.tag} ${take}${disagree}`);
-      speakerI++;
+      const prompt = debate
+        ? `${next.name} in ${next.city}, do not let that sit. If the claim is thin, say so, then put a better one on the table.`
+        : `${next.name} in ${next.city}, keep going. Give us the next layer of ${title}, not a recap.`;
+      turns.push({ speaker: "Paul", text: prompt });
+      continue;
     }
+    const who = callers[speakerI % callers.length];
+    speakerI++;
+    const pack = packTurn(facts, factI, 3, who.name !== "Priya", rand);
+    factI = pack.next;
+    const extra =
+      debate && guard % 5 === 0 ? " I do not buy the tidy version of that. Walk it slower." : "";
+    turns.push({ speaker: who.name, text: `${who.tag} ${pack.text}${extra}` });
   }
 
-  const last = used[Math.min(used.length - 1, 2)];
-  lines.push(
-    `Paul: ${last} My thanks to ${callers.map((c) => c.name).join(", ")}. This is AI Talk Radio. ${title}.`,
-  );
+  const last = facts[Math.min(facts.length - 1, Math.max(2, factI - 1))];
+  turns.push({
+    speaker: "Paul",
+    text: `${spoken(last, false, rand)} That is a full ${minutes} minutes on ${title}. My thanks to ${callers.map((c) => `${c.name} in ${c.city}`).join(", ")}. This is AI Talk Radio. Keep the transmitter honest.`,
+  });
+
+  const leftover = facts.slice(factI);
+  const summary = facts
+    .slice(0, 2)
+    .join(" ")
+    .slice(0, 360);
 
   return {
     title,
     summary:
       summary ||
-      `A roundtable on ${title}. ${callers.map((c) => c.name).join(", ")} with Paul at the desk.`,
-    script: lines.join("\n"),
+      `A ${minutes}-minute roundtable on ${title}. ${callers.map((c) => c.name).join(", ")} with Paul at the desk.`,
+    script: toScript(title, turns),
     sources: [...new Set(bits.map((b) => b.source))],
+    turns,
+    leftover,
+    callers,
+    targetSeconds,
+    wordCount: wordsInTurns(turns),
   };
+}
+
+export function appendClosing(written: WrittenShow, extra: ShowTurn[]): ShowTurn[] {
+  const body = written.turns.slice(0, Math.max(0, written.turns.length - 1));
+  const closing = written.turns[written.turns.length - 1];
+  const all = [...body, ...extra];
+  if (closing) all.push(closing);
+  written.turns = all;
+  written.script = toScript(written.title, all);
+  written.wordCount = wordsInTurns(all);
+  return extra;
 }
